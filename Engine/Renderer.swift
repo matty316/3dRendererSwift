@@ -7,6 +7,7 @@
 
 import MetalKit
 import SwiftUI
+import GameController
 
 class Renderer: NSObject, MTKViewDelegate {
     let device: MTLDevice
@@ -15,7 +16,10 @@ class Renderer: NSObject, MTKViewDelegate {
     let commandQueue: MTLCommandQueue
     let vertexBuffer: MTLBuffer
     var viewportSize = CGSize()
-    var angle: Float = 0.0
+    var zoom: Float = 0.0
+    var cam = Camera()
+    var keysPressed = [GCKeyCode: Bool]()
+    var mouseDelta: (Float, Float) = (0.0, 0.0)
     
     override init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -73,7 +77,26 @@ class Renderer: NSObject, MTKViewDelegate {
         viewportSize.height = size.height
     }
     
+    func processInput() {
+        if keysPressed[.keyW] == true {
+            cam.pos += 0.05 * cam.front
+        }
+        if keysPressed[.keyS] == true {
+            cam.pos -= 0.05 * cam.front
+        }
+        if keysPressed[.keyA] == true {
+            cam.pos -= simd_normalize(simd_cross(cam.front, cam.up)) * 0.05
+        }
+        if keysPressed[.keyD] == true {
+            cam.pos += simd_normalize(simd_cross(cam.front, cam.up)) * 0.05
+        }
+        
+        print(mouseDelta)
+    }
+    
     func draw(in view: MTKView) {
+        processInput()
+        cam.update(view: view)
         let loader = MTKTextureLoader(device: device)
         let texture = try! loader.newTexture(name: "mc_grass", scaleFactor: 1.0, bundle: .main, options: [.origin: MTKTextureLoader.Origin.flippedVertically])
         
@@ -98,12 +121,14 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setRenderPipelineState(pipelineState)
         
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        var cam = Camera(view: view, angle: angle)
         guard let transformationBuffer = device.makeBuffer(bytes: &cam.transformation, length: MemoryLayout<TransformationData>.stride) else {
             return
         }
         renderEncoder.setVertexBuffer(transformationBuffer, offset: 0, index: 1)
         renderEncoder.setFragmentTexture(texture, index: 0)
+        
+        renderEncoder.setFrontFacing(.counterClockwise)
+        renderEncoder.setCullMode(.back)
         
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 36)
         

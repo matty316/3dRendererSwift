@@ -7,14 +7,16 @@
 
 import MetalKit
 import SwiftUI
+import GameController
 
 struct MetalView {
-    @Binding var angle: Double
+    @State var angle: Double = 0.0
+    @State var zoom: Double = 1.0
     @State var renderer = Renderer()
+    @State var keysPressed = [GCKeyCode: Bool]()
     
     func setupView() -> MTKView {
         let view = MTKView()
-        view.delegate = renderer
         view.preferredFramesPerSecond = 60
         view.enableSetNeedsDisplay = true
         
@@ -27,7 +29,26 @@ struct MetalView {
         view.drawableSize = view.frame.size
         view.depthStencilPixelFormat = .depth32Float
         view.isPaused = false
+        view.delegate = renderer
+        
+        NotificationCenter.default.addObserver(forName: Notification.Name.GCKeyboardDidConnect, object: nil, queue: nil) { notification in
+            let keyboard = notification.object as? GCKeyboard
+            keyboard?.keyboardInput?.keyChangedHandler = { _, _, code, pressed in
+                renderer.keysPressed[code] = pressed
+            }
+        }
+        
+        NotificationCenter.default.addObserver(forName: Notification.Name.GCMouseDidConnect, object: nil, queue: nil) { notification in
+            let mouse = notification.object as? GCMouse
+            mouse?.mouseInput?.mouseMovedHandler = { _, deltaY, deltaX in
+                renderer.mouseDelta = (deltaX, deltaY)
+            }
+        }
+        
         return view
+    }
+    
+    func update() {
     }
 }
 
@@ -38,7 +59,7 @@ extension MetalView: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIViewType, context: Context) {
-        
+        update()
     }
 }
 #elseif os(macOS)
@@ -48,7 +69,7 @@ extension MetalView: NSViewRepresentable {
     }
     
     func updateNSView(_ nsView: NSViewType, context: Context) {
-        renderer.angle = Float(angle)
+        update()
     }
 }
 #endif

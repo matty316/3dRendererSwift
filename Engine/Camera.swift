@@ -9,32 +9,27 @@ import simd
 import MetalKit
 
 struct Camera {
-    var transformation: TransformationData
+    var transformation: TransformationData!
+    var pos = vector_float3(0, 0, 3)
+    var front = vector_float3(0, 0, -1)
+    var up = vector_float3(0, 1, 0)
     
-    init(view: MTKView, angle: Float) {
-        let translationMatrix = matrix4x4_translation(tx: 0, ty: 0, tz: -1.0)
-        let angleInDegrees: Float = angle
+    mutating func update(view: MTKView) {
+        let translationMatrix = matrix4x4_translation(0, 0, -1.0)
+        let angleInDegrees: Float = 0.0
         let angleInRadians = angleInDegrees * Float.pi / 180.0
-        let rotationMatrix = matrix4x4_rotation(radians: angleInRadians, axis: [0.0, 1.0, 0.0])
+        let rotationMatrix = matrix4x4_rotation(angleInRadians, [0.0, 1.0, 0.0])
         
         let modelMatrix = simd_mul(translationMatrix, rotationMatrix)
         
-        let R = SIMD3<Float>(1, 0, 0)
-        let U = SIMD3<Float>(0, 1, 0)
-        let F = SIMD3<Float>(0, 0, -1)
-        let P = SIMD3<Float>(0, 0, 1)
-        
-        let viewMatrix = matrix_make_rows(m00: R.x, m10: R.y, m20: R.z, m30: dot(-R, P),
-                                          m01: U.x, m11: U.y, m21: U.z, m31: dot(-U, P),
-                                          m02: -F.x, m12: -F.y, m22: -F.z, m32: dot(F, P),
-                                          m03: 0, m13: 0, m23: 0, m33: 1)
+        let viewMatrix = matrix_look_at_right_hand(pos, pos + front, up)
         
         let aspectRatio = Float(view.frame.size.width / view.frame.size.height)
-        let fov = 90 * (Float.pi / 180.0)
+        let fov = 45.0 * (Float.pi / 180.0)
         let nearZ: Float = 0.1
         let farZ: Float = 100.0
         
-        let perspectiveMatrix = matrix_perspective_right_hand(fovyRadians: fov, aspect: aspectRatio, nearZ: nearZ, farZ: farZ)
+        let perspectiveMatrix = matrix_perspective_right_hand(fov, aspectRatio, nearZ, farZ)
         
         self.transformation = TransformationData(modelMatrix: modelMatrix, viewMatrix: viewMatrix, perspectiveMatrix: perspectiveMatrix)
     }
