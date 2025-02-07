@@ -8,6 +8,11 @@
 import SwiftUI
 
 struct ContentView: View {
+    init() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { _ in
+            nil
+        }
+    }
     var body: some View {
         MetalView()
     }
