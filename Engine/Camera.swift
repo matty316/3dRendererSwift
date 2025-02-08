@@ -10,12 +10,12 @@ import MetalKit
 
 struct Camera {
     var transformation: TransformationData!
-    var pos = vector_float3(0, 0, 3)
+    var pos = vector_float3(10, 20, 10)
     var front = vector_float3(0, 0, -1)
     var up = vector_float3(0, 1, 0)
     
-    mutating func update(view: MTKView) {
-        let translationMatrix = matrix4x4_translation(0, 0, -1.0)
+    mutating func update(view: MTKView, position: SIMD3<Float>) {
+        let translationMatrix = matrix4x4_translation(position)
         let angleInDegrees: Float = 0.0
         let angleInRadians = angleInDegrees * Float.pi / 180.0
         let rotationMatrix = matrix4x4_rotation(angleInRadians, [0.0, 1.0, 0.0])

@@ -19,7 +19,11 @@ class Renderer: NSObject, MTKViewDelegate {
     var zoom: Float = 0.0
     var cam = Camera()
     var keysPressed = [GCKeyCode: Bool]()
-    var mouseDelta: (Float, Float) = (0.0, 0.0)
+    var mouseDelta: (x: Float, y: Float) = (0.0, 0.0)
+    var pitch: Float = 0.0
+    var yaw: Float = -90.0
+    
+    var lastDelta: (x: Float, y: Float) = (0.0, 0.0)
     
     override init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -78,25 +82,58 @@ class Renderer: NSObject, MTKViewDelegate {
     }
     
     func processInput() {
+        let camSpeed: Float = 0.1
         if keysPressed[.keyW] == true {
-            cam.pos += 0.05 * cam.front
+            cam.pos += camSpeed * cam.front
         }
         if keysPressed[.keyS] == true {
-            cam.pos -= 0.05 * cam.front
+            cam.pos -= camSpeed * cam.front
         }
         if keysPressed[.keyA] == true {
-            cam.pos -= simd_normalize(simd_cross(cam.front, cam.up)) * 0.05
+            cam.pos -= simd_normalize(simd_cross(cam.front, cam.up)) * camSpeed
         }
         if keysPressed[.keyD] == true {
-            cam.pos += simd_normalize(simd_cross(cam.front, cam.up)) * 0.05
+            cam.pos += simd_normalize(simd_cross(cam.front, cam.up)) * camSpeed
+        }
+        if keysPressed[.escape] == true {
+            exit(0)
         }
         
-        print(mouseDelta)
+        let delta = lastDelta
+        
+        if abs(mouseDelta.x - delta.x) + abs(mouseDelta.y - delta.y) > 0.0001 {
+            var xOffset = mouseDelta.x
+            var yOffset = mouseDelta.y
+            let sensitivity: Float = 0.1
+            xOffset *= sensitivity
+            yOffset *= sensitivity
+            
+            yaw += xOffset
+            pitch += yOffset
+            
+            if pitch > 89.0 {
+                pitch = 89.0
+            }
+            if pitch < -89.0 {
+                pitch = -89.0
+            }
+            
+            var direction = SIMD3<Float>()
+            direction.x = cos(radians(yaw)) * cos(radians(pitch))
+            direction.y = sin(radians(pitch))
+            direction.z = sin(radians(yaw)) * cos(radians(pitch))
+            cam.front = simd_normalize(direction)
+            lastDelta = mouseDelta
+        }
+    }
+    
+    func radians(_ degrees: Float) -> Float {
+        return degrees * Float.pi / 180.0
     }
     
     func draw(in view: MTKView) {
         processInput()
-        cam.update(view: view)
+        
         let loader = MTKTextureLoader(device: device)
         let texture = try! loader.newTexture(name: "mc_grass", scaleFactor: 1.0, bundle: .main, options: [.origin: MTKTextureLoader.Origin.flippedVertically])
         
@@ -121,16 +158,25 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setRenderPipelineState(pipelineState)
         
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        guard let transformationBuffer = device.makeBuffer(bytes: &cam.transformation, length: MemoryLayout<TransformationData>.stride) else {
-            return
-        }
-        renderEncoder.setVertexBuffer(transformationBuffer, offset: 0, index: 1)
         renderEncoder.setFragmentTexture(texture, index: 0)
         
         renderEncoder.setFrontFacing(.counterClockwise)
         renderEncoder.setCullMode(.back)
         
-        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 36)
+        let chunkSize = 16
+        for i in 0..<chunkSize {
+            for j in 0..<chunkSize {
+                for z in 0..<chunkSize {
+                    cam.update(view: view, position: [Float(1 * i), Float(j * 1), Float(-1 * z)])
+                    guard let transformationBuffer = device.makeBuffer(bytes: &cam.transformation, length: MemoryLayout<TransformationData>.stride) else {
+                        return
+                    }
+                    renderEncoder.setVertexBuffer(transformationBuffer, offset: 0, index: 1)
+                    
+                    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 36)
+                }
+            }
+        }
         
         renderEncoder.endEncoding()
         if let currentDrawable = view.currentDrawable {

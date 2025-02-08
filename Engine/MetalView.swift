@@ -17,7 +17,7 @@ struct MetalView {
     
     func setupView() -> MTKView {
         let view = MTKView()
-        view.preferredFramesPerSecond = 60
+        view.preferredFramesPerSecond = 60 
         view.enableSetNeedsDisplay = true
         
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -40,7 +40,8 @@ struct MetalView {
         
         NotificationCenter.default.addObserver(forName: Notification.Name.GCMouseDidConnect, object: nil, queue: nil) { notification in
             let mouse = notification.object as? GCMouse
-            mouse?.mouseInput?.mouseMovedHandler = { _, deltaY, deltaX in
+            
+            mouse?.mouseInput?.mouseMovedHandler = { _, deltaX, deltaY in
                 renderer.mouseDelta = (deltaX, deltaY)
             }
         }
