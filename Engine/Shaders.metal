@@ -12,6 +12,7 @@ using namespace metal;
 struct Vertex {
     float4 position;
     float2 texCoords;
+    bool top;
 };
 
 struct TransformationData {
@@ -23,6 +24,7 @@ struct TransformationData {
 struct RasterizerData {
     float4 position [[position]];
     float2 texCoords;
+    bool top;
 };
 
 vertex RasterizerData
@@ -33,14 +35,17 @@ vertexShader(uint vertexID [[vertex_id]],
         
     out.position = transformationData->perspectiveMatrix * transformationData->viewMatrix * transformationData->modelMatrix * vertices[vertexID].position;
     out.texCoords = vertices[vertexID].texCoords;
+    out.top = vertices[vertexID].top;
     
     return out;
 }
 
 fragment float4 fragmentShader(RasterizerData in [[stage_in]],
-                               texture2d<float> colorTexture [[texture(0)]]) {
+                               texture2d<float> sideTexture [[texture(0)]],
+                               texture2d<float> topTexture [[texture(1)]]) {
     constexpr sampler textureSampler (mag_filter::linear, min_filter::linear);
-    const float4 colorSample = colorTexture.sample(textureSampler, in.texCoords);
+    const float4 colorSample = in.top ? topTexture.sample(textureSampler, in.texCoords) : sideTexture.sample(textureSampler, in.texCoords);
+    
     return colorSample;
 }
 

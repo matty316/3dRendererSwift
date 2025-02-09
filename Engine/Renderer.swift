@@ -22,7 +22,7 @@ class Renderer: NSObject, MTKViewDelegate {
     var mouseDelta: (x: Float, y: Float) = (0.0, 0.0)
     var pitch: Float = 0.0
     var yaw: Float = -90.0
-    
+    var lastTime: TimeInterval = Date().timeIntervalSinceReferenceDate
     var lastDelta: (x: Float, y: Float) = (0.0, 0.0)
     
     override init() {
@@ -82,7 +82,9 @@ class Renderer: NSObject, MTKViewDelegate {
     }
     
     func processInput() {
-        let camSpeed: Float = 0.1
+        let deltaTime = Date().timeIntervalSinceReferenceDate - lastTime
+        lastTime = Date().timeIntervalSinceReferenceDate
+        let camSpeed: Float = 10 * Float(deltaTime)
         if keysPressed[.keyW] == true {
             cam.pos += camSpeed * cam.front
         }
@@ -131,11 +133,17 @@ class Renderer: NSObject, MTKViewDelegate {
         return degrees * Float.pi / 180.0
     }
     
+    func loadNearChunks() {
+        
+    }
+    
     func draw(in view: MTKView) {
+        loadNearChunks()
         processInput()
         
         let loader = MTKTextureLoader(device: device)
-        let texture = try! loader.newTexture(name: "mc_grass", scaleFactor: 1.0, bundle: .main, options: [.origin: MTKTextureLoader.Origin.flippedVertically])
+        let sideTexture = try! loader.newTexture(name: "mc_grass", scaleFactor: 1.0, bundle: .main, options: [.origin: MTKTextureLoader.Origin.flippedVertically])
+        let topTexture = try! loader.newTexture(name: "mc_grass_top", scaleFactor: 1.0, bundle: .main)
         
         guard let renderPassDescriptor = view.currentRenderPassDescriptor, let commandBuffer = commandQueue.makeCommandBuffer() else {
             return
@@ -158,25 +166,17 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setRenderPipelineState(pipelineState)
         
         renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        renderEncoder.setFragmentTexture(texture, index: 0)
+        renderEncoder.setFragmentTexture(sideTexture, index: 0)
+        renderEncoder.setFragmentTexture(topTexture, index: 1)
         
         renderEncoder.setFrontFacing(.counterClockwise)
         renderEncoder.setCullMode(.back)
+//        renderEncoder.setTriangleFillMode(.lines)
         
-        let chunkSize = 16
-        for i in 0..<chunkSize {
-            for j in 0..<chunkSize {
-                for z in 0..<chunkSize {
-                    cam.update(view: view, position: [Float(1 * i), Float(j * 1), Float(-1 * z)])
-                    guard let transformationBuffer = device.makeBuffer(bytes: &cam.transformation, length: MemoryLayout<TransformationData>.stride) else {
-                        return
-                    }
-                    renderEncoder.setVertexBuffer(transformationBuffer, offset: 0, index: 1)
-                    
-                    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 36)
-                }
-            }
-        }
+        var chunk = Chunk(origin: [0, 0])
+        chunk.isLoaded = true
+        chunk.generateTerrain()
+        chunk.render(cam: &cam, renderEncoder: renderEncoder, view: view, device: device)
         
         renderEncoder.endEncoding()
         if let currentDrawable = view.currentDrawable {
