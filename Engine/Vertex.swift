@@ -10,61 +10,72 @@ import simd
 struct Vertex {
     let position: SIMD4<Float>
     let texCoords: SIMD2<Float>
+    let normal: SIMD3<Float>
     let top: Bool
     
-    init(position: SIMD4<Float>, texCoords: SIMD2<Float>, top: Bool = false) {
+    init(position: SIMD4<Float>, texCoords: SIMD2<Float>, normal: SIMD3<Float>, top: Bool = false) {
         self.position = position
         self.texCoords = texCoords
+        self.normal = normal
         self.top = top
     }
 }
 
-let cubeVertices = [
+let cubeVertices = (
     //Front face
-    Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0]),
-    Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 0.0]),
-    Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 1.0]),
-    Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0]),
-    
+    front: [
+        Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, 0.0, 1.0]),
+        Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 0.0], normal: [0.0, 0.0, 1.0]),
+        Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, 0.0, 1.0]),
+        Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, 0.0, 1.0]),
+        Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 1.0], normal: [0.0, 0.0, 1.0]),
+        Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, 0.0, 1.0]),
+    ],
     //Back face
-    Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0]),
-    Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [1.0, 0.0]),
-    Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [0.0, 1.0]),
-    Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0]),
-    
+    back: [
+        Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, 0.0, -1.0]),
+        Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [1.0, 0.0], normal: [0.0, 0.0, -1.0]),
+        Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, 0.0, -1.0]),
+        Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, 0.0, -1.0]),
+        Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [0.0, 1.0], normal: [0.0, 0.0, -1.0]),
+        Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, 0.0, -1.0]),
+    ],
     //Top face
-    Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 0.0], top: true),
-    Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 0.0], top: true),
-    Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], top: true),
-    Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], top: true),
-    Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [0.0, 1.0], top: true),
-    Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 0.0], top: true),
-    
+    top: [
+        Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, 1.0, 0.0], top: true),
+        Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 0.0], normal: [0.0, 1.0, 0.0], top: true),
+        Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, 1.0, 0.0], top: true),
+        Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, 1.0, 0.0], top: true),
+        Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [0.0, 1.0], normal: [0.0, 1.0, 0.0], top: true),
+        Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, 1.0, 0.0], top: true),
+    ],
     //Bottom face
-    Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0]),
-    Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [1.0, 0.0]),
-    Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 1.0]),
-    Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0]),
+    bottom: [
+        Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, -1.0, 0.0]),
+        Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [1.0, 0.0], normal: [0.0, -1.0, 0.0]),
+        Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, -1.0, 0.0]),
+        Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 1.0], normal: [0.0, -1.0, 0.0]),
+        Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 1.0], normal: [0.0, -1.0, 0.0]),
+        Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0], normal: [0.0, -1.0, 0.0]),
+    ],
     
     //Left face
-    Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0]),
-    Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 0.0]),
-    Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [0.0, 1.0]),
-    Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0]),
+    left: [
+        Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0], normal: [-1.0, 0.0, 0.0]),
+        Vertex(position: [-0.5, -0.5, 0.5, 1.0], texCoords: [1.0, 0.0], normal: [-1.0, 0.0, 0.0]),
+        Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0], normal: [-1.0, 0.0, 0.0]),
+        Vertex(position: [-0.5, 0.5, 0.5, 1.0], texCoords: [1.0, 1.0], normal: [-1.0, 0.0, 0.0]),
+        Vertex(position: [-0.5, 0.5, -0.5, 1.0], texCoords: [0.0, 1.0], normal: [-1.0, 0.0, 0.0]),
+        Vertex(position: [-0.5, -0.5, -0.5, 1.0], texCoords: [0.0, 0.0], normal: [-1.0, 0.0, 0.0]),
+    ],
     
     //Right face
-    Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0]),
-    Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [1.0, 0.0]),
-    Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0]),
-    Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 1.0]),
-    Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0]),
-]
+    right: [
+        Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0], normal: [1.0, 0.0, 0.0]),
+        Vertex(position: [0.5, -0.5, -0.5, 1.0], texCoords: [1.0, 0.0], normal: [1.0, 0.0, 0.0]),
+        Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], normal: [1.0, 0.0, 0.0]),
+        Vertex(position: [0.5, 0.5, -0.5, 1.0], texCoords: [1.0, 1.0], normal: [1.0, 0.0, 0.0]),
+        Vertex(position: [0.5, 0.5, 0.5, 1.0], texCoords: [0.0, 1.0], normal: [1.0, 0.0, 0.0]),
+        Vertex(position: [0.5, -0.5, 0.5, 1.0], texCoords: [0.0, 0.0], normal: [1.0, 0.0, 0.0]),
+    ]
+)

@@ -12,6 +12,7 @@ using namespace metal;
 struct Vertex {
     float4 position;
     float2 texCoords;
+    float3 normal;
     bool top;
 };
 
@@ -30,10 +31,10 @@ struct RasterizerData {
 vertex RasterizerData
 vertexShader(uint vertexID [[vertex_id]],
              constant Vertex *vertices [[buffer(0)]],
-             constant TransformationData* transformationData) {
+             constant TransformationData* transformationData[[buffer((1))]]) {
     RasterizerData out;
         
-    out.position = transformationData->perspectiveMatrix * transformationData->viewMatrix * transformationData->modelMatrix * vertices[vertexID].position;
+    out.position = transformationData[vertexID].perspectiveMatrix * transformationData[vertexID].viewMatrix * transformationData[vertexID].modelMatrix * vertices[vertexID].position;
     out.texCoords = vertices[vertexID].texCoords;
     out.top = vertices[vertexID].top;
     

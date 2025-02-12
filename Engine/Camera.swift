@@ -8,13 +8,13 @@
 import simd
 import MetalKit
 
-struct Camera {
+class Camera {
     var transformation: TransformationData!
     var pos = vector_float3(10, 20, 10)
     var front = vector_float3(0, 0, -1)
     var up = vector_float3(0, 1, 0)
     
-    mutating func update(view: MTKView, position: SIMD3<Float>) {
+    func update(width: Float, height: Float, position: SIMD3<Float>) {
         let translationMatrix = matrix4x4_translation(position)
         let angleInDegrees: Float = 0.0
         let angleInRadians = angleInDegrees * Float.pi / 180.0
@@ -24,7 +24,7 @@ struct Camera {
         
         let viewMatrix = matrix_look_at_right_hand(pos, pos + front, up)
         
-        let aspectRatio = Float(view.frame.size.width / view.frame.size.height)
+        let aspectRatio = width / height
         let fov = 45.0 * (Float.pi / 180.0)
         let nearZ: Float = 0.1
         let farZ: Float = 100.0

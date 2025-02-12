@@ -12,6 +12,7 @@ struct Chunk {
     var blocks = [[[Block]]]()
     let chunkSize = 16
     let origin: SIMD2<Double>
+    var vertices = [[[[Vertex]]]]()
     static let noise: GKNoise = {
         let source = GKPerlinNoiseSource()
         source.frequency = 0.5
@@ -19,19 +20,27 @@ struct Chunk {
         return GKNoise(source)
     }()
     
-    var isLoaded = false
+    var drawCounter = 0
+    
+    var isLoaded: Bool
+    var verts = [Vertex]()
+    var transformations = [TransformationData]()
     
     init(origin: SIMD2<Double>) {
         self.origin = origin
         for i in 0..<chunkSize {
             self.blocks.append([[Block]]())
+            self.vertices.append([[[Vertex]]]())
             for j in 0..<chunkSize {
                 self.blocks[i].append([Block]())
+                self.vertices[i].append([[Vertex]]())
                 for _ in 0..<chunkSize {
                     self.blocks[i][j].append(Block(blockType: .grass, isActive: false))
+                    self.vertices[i][j].append([Vertex]())
                 }
             }
         }
+        self.isLoaded = false
     }
     
     func getNoiseMap() -> GKNoiseMap {
@@ -66,6 +75,8 @@ struct Chunk {
     }
     
     mutating func generateTerrain() {
+        guard !isLoaded else { return }
+        print("Called generate terrain")
         let noiseMap = getNoiseMap()
         for x in 0..<chunkSize {
             for z in 0..<chunkSize {
@@ -78,36 +89,123 @@ struct Chunk {
         }
     }
     
-    mutating func isBlockHidden(_ x: Int, _ y: Int, _ z: Int) -> Bool {
-            let blockLeft = x > 0 && blocks[x - 1][y][z].isActive
-            let blockRight = x < chunkSize - 1 && blocks[x + 1][y][z].isActive
-            let blockBehind = z > 0 && blocks[x][y][z - 1].isActive
-            let blockFront = z < chunkSize - 1 && blocks[x][y][z + 1].isActive
-            let blockAbove = y > 0 && blocks[x][y - 1][z].isActive
-            let blockBelow = y < chunkSize - 1 && blocks[x][y + 1][z].isActive
-            
-            return blockLeft && blockRight && blockBehind && blockFront && blockAbove && blockBelow
-    }
-    
-    mutating func render(cam: inout Camera, renderEncoder: MTLRenderCommandEncoder, view: MTKView, device: MTLDevice) {
-        guard isLoaded else { return }
+    mutating func removeInternalBlocks() {
+        guard !isLoaded else { return }
+        print("Called remove blocks")
+        let temp = blocks
         for x in 0..<chunkSize {
             for y in 0..<chunkSize {
                 for z in 0..<chunkSize {
-                    let block = blocks[x][y][z]
-                    guard block.isActive && !isBlockHidden(x, y, z) else { continue }
-                    let x = Float(x) + Float(origin.x * Double(chunkSize))
-                    let y = Float(y)
-                    let z = Float(-1 * z) + Float(origin.y * Double(chunkSize))
-                    cam.update(view: view, position: [x, y, z])
-                    guard let transformationBuffer = device.makeBuffer(bytes: &cam.transformation, length: MemoryLayout<TransformationData>.stride) else {
-                        return
-                    }
-                    renderEncoder.setVertexBuffer(transformationBuffer, offset: 0, index: 1)
+                    guard blocks[x][y][z].isActive else { continue }
+                    let blockLeft = x > 0 && temp[x - 1][y][z].isActive
+                    let blockRight = x < chunkSize - 1 && temp[x + 1][y][z].isActive
+                    let blockBehind = z > 0 && temp[x][y][z - 1].isActive
+                    let blockFront = z < chunkSize - 1 && temp[x][y][z + 1].isActive
+                    let blockAbove = y < chunkSize - 1 && temp[x][y + 1][z].isActive
+                    let blockBelow = y > 0 && temp[x][y - 1][z].isActive
                     
-                    renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 36)
+                    if blockLeft && blockRight && blockBehind && blockFront && blockAbove && blockBelow {
+                        blocks[x][y][z].isActive = false
+                    }
                 }
             }
         }
+    }
+    
+    mutating func createVertices() {
+        guard !isLoaded else { return }
+        print("Called create vertices")
+        let temp = blocks
+
+        for x in 0..<chunkSize {
+            for y in 0..<chunkSize {
+                for z in 0..<chunkSize {
+                    guard blocks[x][y][z].isActive else {
+                        continue
+                    }
+                    var verts = vertices[x][y][z]
+                    
+                    let blockLeft = x > 0 && temp[x - 1][y][z].isActive
+                    let blockRight = x < chunkSize - 1 && temp[x + 1][y][z].isActive
+                    let blockBehind = z < chunkSize - 1 && temp[x][y][z + 1].isActive
+                    let blockFront = z > 0 && temp[x][y][z - 1].isActive
+                    let blockAbove = y < chunkSize - 1 && temp[x][y + 1][z].isActive
+                    let blockBelow = y > 0 && temp[x][y - 1][z].isActive
+                    
+                    if blockLeft && blockRight && blockBehind && blockFront && blockAbove && blockBelow {
+                        blocks[x][y][z].isActive = false
+                        continue
+                    }
+                    
+                    if !blockLeft {
+                        verts.append(contentsOf: cubeVertices.left)
+                    }
+                    if !blockRight {
+                        verts.append(contentsOf: cubeVertices.right)
+                    }
+                    if !blockBehind {
+                        verts.append(contentsOf: cubeVertices.back)
+                    }
+                    if !blockFront {
+                        verts.append(contentsOf: cubeVertices.front)
+                    }
+                    if !blockAbove {
+                        verts.append(contentsOf: cubeVertices.top)
+                    }
+                    if !blockBelow {
+                        verts.append(contentsOf: cubeVertices.bottom)
+                    }
+                   
+                    if !verts.isEmpty {
+                        vertices[x][y][z].append(contentsOf: verts)
+                    }
+                }
+            }
+        }
+    }
+    
+    mutating func setCamera(cam: Camera, width: Float, height: Float, x: Int, y: Int, z: Int) {
+        let block = blocks[x][y][z]
+        guard block.isActive else { return }
+        let vertex = vertices[x][y][z]
+        guard !vertex.isEmpty else { return }
+    
+        verts.append(contentsOf: vertex)
+        
+        let x = Float(x) + Float(origin.x * Double(chunkSize))
+        let y = Float(y)
+        let z = Float(-1 * z) + Float(origin.y * Double(chunkSize))
+        cam.update(width: width, height: height, position: [x, y, z])
+        
+        vertex.forEach { _ in
+            transformations.append(cam.transformation)
+        }
+    }
+    
+    mutating func render(cam: Camera, renderEncoder: MTLRenderCommandEncoder, width: Float, height: Float, device: MTLDevice) {
+        transformations.removeAll()
+        for x in 0..<chunkSize {
+            for y in 0..<chunkSize {
+                for z in 0..<chunkSize {
+                    setCamera(cam: cam, width: width, height: height, x: x, y: y, z: z)
+                }
+            }
+        }
+
+        print(verts.count)
+        print(transformations.count)
+        guard let vertexBuffer = device.makeBuffer(bytes: verts, length: MemoryLayout<Vertex>.stride * verts.count) else {
+            return
+        }
+        
+        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        
+        guard let transformationBuffer = device.makeBuffer(bytes: transformations, length: MemoryLayout<TransformationData>.stride * transformations.count) else {
+            return
+        }
+        
+        renderEncoder.setVertexBuffer(transformationBuffer, offset: 0, index: 1)
+        
+        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: verts.count)
     }
 }

@@ -14,7 +14,6 @@ class Renderer: NSObject, MTKViewDelegate {
     let depthState: MTLDepthStencilState
     let pipelineState: MTLRenderPipelineState
     let commandQueue: MTLCommandQueue
-    let vertexBuffer: MTLBuffer
     var viewportSize = CGSize()
     var zoom: Float = 0.0
     var cam = Camera()
@@ -24,6 +23,7 @@ class Renderer: NSObject, MTKViewDelegate {
     var yaw: Float = -90.0
     var lastTime: TimeInterval = Date().timeIntervalSinceReferenceDate
     var lastDelta: (x: Float, y: Float) = (0.0, 0.0)
+    var chunk: Chunk
     
     override init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -49,11 +49,6 @@ class Renderer: NSObject, MTKViewDelegate {
         
         self.depthState = depthState
         
-        guard let vertexBuffer = device.makeBuffer(bytes: cubeVertices, length: MemoryLayout<Vertex>.stride * cubeVertices.count) else {
-            fatalError("cannot make vertex buffer")
-        }
-        self.vertexBuffer = vertexBuffer
-        
         let pipelineStateDescriptor = MTLRenderPipelineDescriptor()
         pipelineStateDescriptor.label = "Render Pipeline"
         pipelineStateDescriptor.vertexFunction = vertexFunc
@@ -73,6 +68,11 @@ class Renderer: NSObject, MTKViewDelegate {
         
         self.commandQueue = commandQueue
         
+        var chunk = Chunk(origin: [0, 0])
+        chunk.generateTerrain()
+        chunk.createVertices()
+        self.chunk = chunk
+         
         super.init()
     }
     
@@ -165,7 +165,6 @@ class Renderer: NSObject, MTKViewDelegate {
         
         renderEncoder.setRenderPipelineState(pipelineState)
         
-        renderEncoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         renderEncoder.setFragmentTexture(sideTexture, index: 0)
         renderEncoder.setFragmentTexture(topTexture, index: 1)
         
@@ -173,11 +172,11 @@ class Renderer: NSObject, MTKViewDelegate {
         renderEncoder.setCullMode(.back)
 //        renderEncoder.setTriangleFillMode(.lines)
         
-        var chunk = Chunk(origin: [0, 0])
-        chunk.isLoaded = true
-        chunk.generateTerrain()
-        chunk.render(cam: &cam, renderEncoder: renderEncoder, view: view, device: device)
-        
+        chunk.render(cam: cam,
+                     renderEncoder: renderEncoder,
+                     width: Float(view.frame.width),
+                     height: Float(view.frame.height),
+                     device: device)
         renderEncoder.endEncoding()
         if let currentDrawable = view.currentDrawable {
             commandBuffer.present(currentDrawable)
